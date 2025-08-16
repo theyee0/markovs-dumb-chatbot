@@ -1,5 +1,8 @@
 #include "translation.h"
 
+char **vocabulary;
+int vocabulary_size;
+
 int intcmp(const void *_a, const void *_b) {
         const int *a = _a;
         const int *b = _b;
@@ -8,8 +11,8 @@ int intcmp(const void *_a, const void *_b) {
 }
 
 int strcmp_wrap(const void *_a, const void *_b) {
-        const char **a = _a;
-        const char **b = _b;
+        const char **a = (const char**)_a;
+        const char **b = (const char**)_b;
 
         return strcmp(*a, *b);
 }
@@ -29,7 +32,7 @@ bool vector_push(struct vector *v, int item) {
 }
 
 bool load_vocabulary(FILE* fp) {
-        constexpr int buf_size = 1024;
+        const int buf_size = 1024;
         char b[buf_size];
 
         while (fgets(b, buf_size, fp) != NULL) {
@@ -39,6 +42,8 @@ bool load_vocabulary(FILE* fp) {
         }
 
         qsort(vocabulary, vocabulary_size, sizeof(*vocabulary), strcmp_wrap);
+
+        return true;
 }
 
 bool valid_word(char *w) {
@@ -46,7 +51,7 @@ bool valid_word(char *w) {
 }
 
 int fgettok(FILE *fp) {
-        constexpr int buf_size = 1024;
+        const int buf_size = 1024;
         char b[buf_size];
         int len = 0;
         char c;
