@@ -4,6 +4,7 @@
 #include "translation.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 bool table_depfx(struct table*);
 bool table_pfx(struct table*);
