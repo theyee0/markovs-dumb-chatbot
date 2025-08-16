@@ -53,3 +53,7 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# IDE tooling
+compile_commands.json
+tags
