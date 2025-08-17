@@ -55,12 +55,10 @@ int first_greater(int *v, int n, int t) {
         while (r - l > 1) {
                 m = (r + l) / 2;
 
-                if (v[m] > t) {
+                if (v[m] >= t) {
                         r = m;
-                } else if (v[m] < t) {
-                        l = m;
                 } else {
-                        return m;
+                        l = m;
                 }
         }
 
