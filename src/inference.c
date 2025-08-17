@@ -1,16 +1,15 @@
 #include "inference.h"
 
 char* next_tok(struct vector* history, const struct table table) {
-        const int prev = vector_peek(*history);
+        const int prev = (history->size > 0) ? vector_peek(*history) : rand() % vocabulary_size;
         const int range = table.items[prev][table.size - 1];
+
+        if (range <= 0) {
+                return NULL;
+        }
+
         const int selection = rand() % range;
-        const int index =
-                (int**)bsearch(&selection,
-                               table.items[prev],
-                               table.size,
-                               sizeof(selection),
-                               intcmp) -
-                table.items;
+        const int index = first_greater(table.items[prev], table.size, selection);
 
         vector_push(history, index);
 
