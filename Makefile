@@ -30,4 +30,11 @@ $(OBJ_DIR):
 .PHONY: all clean debug release
 
 clean:
-	rm -rf $(OBJ_DIR)
+	-rm -rf $(OBJ_DIR)
+	-rm $(NAME)
+
+debug: CFLAGS += -g -fsanitize=address
+debug: $(NAME)
+
+release: CFLAGS += -O3
+release: $(NAME)
