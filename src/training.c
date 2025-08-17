@@ -1,5 +1,18 @@
 #include "training.h"
 
+bool table_init(struct table* table) {
+        int i;
+        table->size = vocabulary_size;
+
+        table->items = malloc(vocabulary_size * sizeof(*table->items));
+
+        for (i = 0; i < vocabulary_size; i++) {
+                table->items[i] = calloc(vocabulary_size, sizeof(**table->items));
+        }
+
+        return true;
+}
+
 bool table_depfx(struct table* table) {
         int i, j;
         for (i = 0; i < table->size; i++) {

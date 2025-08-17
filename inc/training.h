@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+bool table_init(struct table*);
+
 bool table_depfx(struct table*);
 bool table_pfx(struct table*);
 
