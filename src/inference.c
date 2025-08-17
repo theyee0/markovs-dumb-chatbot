@@ -8,7 +8,7 @@ char* next_tok(struct vector* history, const struct table table) {
                 return NULL;
         }
 
-        const int selection = rand() % (range - 1) + 1;
+        const int selection = (range > 1) ? rand() % (range - 1) + 1 : 1;
         const int index = first_greater(table.items[prev], table.size, selection);
 
         vector_push(history, index);
