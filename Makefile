@@ -12,6 +12,12 @@ OBJ_FILES := $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(SRC_FILES)))
 
 all: $(NAME)
 
+debug: CFLAGS += -g -fsanitize=address
+debug: $(NAME)
+
+release: CFLAGS += -O3
+release: $(NAME)
+
 $(NAME): $(OBJ_FILES)
 	$(CC) $(CFLAGS) -I $(INC_DIR) $(OBJ_FILES) -o $(NAME)
 
@@ -21,7 +27,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-.PHONY: all clean
+.PHONY: all clean debug release
 
 clean:
 	rm -rf $(OBJ_DIR)
