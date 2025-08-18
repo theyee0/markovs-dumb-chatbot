@@ -1,7 +1,7 @@
 #ifndef __TRAINING_H
 #define __TRAINING_H
 
-#include "translation.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>

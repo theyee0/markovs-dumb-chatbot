@@ -7,7 +7,7 @@ INC_DIR := inc
 SRC_DIR := src
 OBJ_DIR := obj
 
-SRC_FILES := inference training translation main
+SRC_FILES := inference training utils main structures
 OBJ_FILES := $(addprefix $(OBJ_DIR)/, $(addsuffix .o, $(SRC_FILES)))
 
 all: $(NAME)

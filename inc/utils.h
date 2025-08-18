@@ -1,6 +1,7 @@
-#ifndef __TRANSLATION_H
-#define __TRANSLATION_H
+#ifndef __UTILS_H
+#define __UTILS_H
 
+#include "structures.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,24 +14,7 @@ extern int vocabulary_size;
 int intcmp(const void*, const void*);
 int strcmp_wrap(const void*, const void*);
 
-struct vector {
-        int size;
-        int alloc;
-        int *items;
-};
-
-bool vector_init(struct vector*);
-int vector_peek(struct vector);
-bool vector_push(struct vector*, int);
-bool vector_free(struct vector*);
-
 int first_greater(int *v, int n, int t);
-struct table {
-        int size;
-        int **items;
-};
-
-bool table_free(struct table*);
 
 /* Load vocabulary from a dictionary containing one word per line */
 bool load_vocabulary(FILE*);

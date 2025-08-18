@@ -1,7 +1,7 @@
 #ifndef __INFERENCE_H
 #define __INFERENCE_H
 
-#include "translation.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 
