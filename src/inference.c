@@ -2,6 +2,11 @@
 
 char* next_tok(struct vector* history, const struct table table) {
         const int prev = (history->size > 0) ? vector_peek(*history) : rand() % vocabulary_size;
+
+        if (prev == -1) {
+                return NULL;
+        }
+
         const int range = table.items[prev][table.size - 1];
 
         if (range <= 0) {
