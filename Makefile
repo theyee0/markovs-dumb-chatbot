@@ -1,6 +1,6 @@
 NAME := markovs_dumb_chatbot
 
-CC := clang
+CC := gcc
 CFLAGS = -Wall -Wextra -Wpedantic -Werror
 
 INC_DIR := inc
@@ -27,7 +27,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-.PHONY: all clean debug release
+.PHONY: all clean debug release profile
 
 clean:
 	-rm -rf $(OBJ_DIR)
@@ -38,3 +38,6 @@ debug: $(NAME)
 
 release: CFLAGS += -O3
 release: $(NAME)
+
+profile: CFLAGS += -pg
+profile: $(NAME)
