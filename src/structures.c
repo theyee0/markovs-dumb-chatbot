@@ -164,7 +164,7 @@ bool hashtable_resize(struct hashtable *table) {
 
         for (i = 0; i < old_size; i++) {
                 for (j = 0; j < old_buckets[i].size; j++) {
-                        hash_index = table->hash(old_buckets[i].items[j].ptr->x) % table->alloc;
+                        hash_index = table->hash(((struct pair*)old_buckets[i].items[j].ptr)->x) % table->alloc;
                         vector_push(&table->buckets[hash_index], old_buckets[i].items[j]);
                 }
 

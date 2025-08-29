@@ -8,8 +8,9 @@ int main(int argc, char *argv[]) {
         int opt;
         time_t t;
 
-        struct table table;
-        struct vector history;
+        UT_array *vocabulary = NULL;
+        UT_array *history = NULL;
+        UT_array *table = NULL;
 
         FILE *vocab = NULL;
         FILE *train = NULL;
@@ -50,56 +51,56 @@ int main(int argc, char *argv[]) {
                 }
         }
 
-        if (vocab == NULL) {
-                perror("Vocabulary file not found");
-                exit(1);
-        } else {
-                load_vocabulary(vocab);
+        if (vocab != NULL) {
+                load_vocabulary_file(vocab, vocabulary);
                 fclose(vocab);
-        }
-
-        if (model == NULL) {
-                table_init(&table);
         } else {
-                fclose(model);
-                perror("Not yet implemented!");
                 exit(1);
         }
 
         if (train != NULL) {
-                read_data(&table, train);
+                table_depfx(table);
+                read_data(table, train, vocabulary);
+                table_pfx(table);
                 fclose(train);
         }
 
-        if (prompt != NULL) {
-                vector_init(&history);
+        remove_vocabulary_duplicates(vocabulary);
 
+        if (model == NULL) {
+                table_init(&table, vocabulary);
+        } else {
+                fclose(model);
+                //load_model(table, model);
+                perror("load_model(): Not yet implemented!");
+                exit(1);
+        }
+
+        if (prompt != NULL) {
                 printf("%s ", prompt);
 
                 word = strtok(prompt, " \n,.!;:");
 
                 while (word != NULL) {
-                        token = lookup_tok(word);
+                        token = lookup_tok(word, vocabulary);
                         if (token != -1)
-                                vector_push(&history, token);
+                                utarray_push_back(history, &token);
 
                         word = strtok(NULL, " \n,.!;:");
                 }
 
-                table_pfx(&table);
                 while (true) {
-                        char* token = next_tok(&history, table);
+                        char* token = next_tok(history, table, vocabulary);
                         if (token == NULL)
                                 break;
                         printf("%s ", token);
                 }
                 printf("\n");
-
-                vector_free(&history);
         }
 
-        free_vocabulary();
-        table_free(&table);
+        utarray_free(vocabulary);
+        utarray_free(history);
+        utarray_free(table);
 
         return 0;
 }

@@ -1,17 +1,24 @@
 #ifndef __TRAINING_H
 #define __TRAINING_H
 
+#include "uthash.h"
+#include "utarray.h"
 #include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 
-bool table_init(struct table*);
+struct entry {
+        int key;
+        int count;
+};
 
-bool table_depfx(struct table*);
-bool table_pfx(struct table*);
+void table_init(UT_array**, UT_array*);
 
-bool table_push(struct table*, const int, const int);
-bool read_data(struct table*, FILE*);
+void table_depfx(UT_array*);
+void table_pfx(UT_array*);
+
+void table_push(UT_array*, const int, const int);
+void read_data(UT_array*, FILE*, const UT_array*);
 
 #endif
