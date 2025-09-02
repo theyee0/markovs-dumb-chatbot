@@ -8,18 +8,20 @@ char* next_tok(UT_array *history, const UT_array *table, const UT_array *vocabul
                 return NULL;
         }
 
-        const UT_array *probabilities = *(UT_array**)utarray_eltptr(table, (unsigned)prev);
-        const struct entry *last_item = utarray_back(probabilities);
-        const int range = last_item->count;
+        const UT_array *prob = *(UT_array**)utarray_eltptr(table, (unsigned)prev);
+        const struct entry *last_item = utarray_back(prob);
 
-        if (range <= 0) {
+        if (last_item == NULL || last_item->count == 0) {
                 return NULL;
         }
 
+        const int range = last_item->count;
+
         const int selection = (range > 1) ? rand() % (range - 1) + 1 : 1;
-        const int index = first_greater(probabilities, selection);
+        const int index = first_greater(prob, selection);
+        const struct entry *item = utarray_eltptr(prob, (unsigned)index);
 
-        utarray_push_back(history, &index);
+        utarray_push_back(history, &item->key);
 
-        return lookup_word(index, vocabulary);
+        return lookup_word(item->key, vocabulary);
 }

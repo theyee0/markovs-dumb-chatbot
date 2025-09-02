@@ -1,9 +1,19 @@
 #include "training.h"
+#include <assert.h>
+
+static int cmp_tabkey(const void *_a, const void *_b) {
+        const struct entry *a = _a;
+        const struct entry *b = _b;
+
+        return a->key - b->key;
+}
 
 static void utarray_copy(void *_dst, const void *_src) {
         const UT_array *src = *(UT_array**)_src;
         UT_array **dst = _dst;
         int n = src->n * src->icd.sz;
+
+        *dst = malloc(sizeof(**dst));
 
         **dst = *src;
 
@@ -29,11 +39,13 @@ void table_init(UT_array **table, UT_array *vocabulary) {
         UT_array *row = NULL;
 
         utarray_new(*table, &table_icd);
-        utarray_resize(*table, vocabulary_size);
+        utarray_reserve(*table, vocabulary_size);
 
         for (i = 0; i < vocabulary_size; i++) {
+                row = NULL;
                 utarray_new(row, &entry_icd);
-                utarray_replace(*table, &row, i);
+                utarray_push_back(*table, &row);
+                utarray_free(row);
         }
 }
 
@@ -42,6 +54,7 @@ void table_depfx(UT_array *table) {
         struct entry *e;
         int prev;
         int tmp;
+
         while ((arr = utarray_next(table, arr))) {
                 e = NULL;
                 prev = 0;
@@ -57,23 +70,14 @@ void table_pfx(UT_array *table) {
         UT_array **arr = NULL;
         struct entry *e;
         int prev;
-        int tmp;
         while ((arr = utarray_next(table, arr))) {
                 e = NULL;
                 prev = 0;
+
                 while ((e = utarray_next(*arr, e))) {
-                        tmp = e->count;
-                        e->count += prev;
-                        prev = tmp;
+                        prev = (e->count += prev);
                 }
         }
-}
-
-static int cmp_tabkey(const void *_a, const void *_b) {
-        const struct entry *a = _a;
-        const struct entry *b = _b;
-
-        return a->key - b->key;
 }
 
 /*
@@ -86,14 +90,15 @@ static int cmp_tabcnt(const void *_a, const void *_b) {
 */
 
 void table_push(UT_array *table, const int parent, const int child) {
-        UT_array *row = utarray_eltptr(table, (unsigned)parent);
+        UT_array *row = *(UT_array**)utarray_eltptr(table, (unsigned)parent);
         struct entry e = {.key = child, .count = 1};
-        struct entry *p;
+        struct entry *p = NULL;
 
         p = utarray_find(row, &e, cmp_tabkey);
 
         if (p == NULL) {
                 utarray_push_back(row, &e);
+                utarray_sort(row, cmp_tabkey);
         } else {
                 p->count++;
         }

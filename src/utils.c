@@ -38,13 +38,14 @@ int first_greater(const UT_array *v, const int t) {
 
 void load_vocabulary_file(FILE* fp, UT_array* vocabulary) {
         const int buf_size = 1024;
-        char b[buf_size];
+        char *b = malloc(buf_size * sizeof(*b));
 
         while (fgets(b, buf_size, fp) != NULL) {
                 b[strcspn(b, "\n")] = '\0';
                 utarray_push_back(vocabulary, &b);
         }
 
+        free(b);
         utarray_sort(vocabulary, strcmp_wrap);
 }
 
@@ -92,7 +93,7 @@ void remove_vocabulary_duplicates(UT_array *vocabulary) {
         utarray_clear(vocabulary);
 
         HASH_ITER(hh, words, word, tmp) {
-                utarray_push_back(vocabulary, word->key);
+                utarray_push_back(vocabulary, &word->key);
                 HASH_DEL(words, word);
                 free(word->key);
                 free(word);

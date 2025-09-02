@@ -26,7 +26,8 @@ int main(int argc, char *argv[]) {
                 switch (opt) {
                 case 'h':
                         printf("Markov's Dumb Chatbot");
-                        break;
+
+                        return 0;
                 case 't':
                         if ((train = fopen(optarg, "r")) == NULL) {
                                 perror("Invalid filename for training data");
@@ -51,18 +52,14 @@ int main(int argc, char *argv[]) {
                 }
         }
 
+        utarray_new(vocabulary, &ut_str_icd);
+        utarray_new(history, &ut_int_icd);
+
         if (vocab != NULL) {
                 load_vocabulary_file(vocab, vocabulary);
                 fclose(vocab);
         } else {
                 exit(1);
-        }
-
-        if (train != NULL) {
-                table_depfx(table);
-                read_data(table, train, vocabulary);
-                table_pfx(table);
-                fclose(train);
         }
 
         remove_vocabulary_duplicates(vocabulary);
@@ -74,6 +71,13 @@ int main(int argc, char *argv[]) {
                 //load_model(table, model);
                 perror("load_model(): Not yet implemented!");
                 exit(1);
+        }
+
+        if (train != NULL) {
+                table_depfx(table);
+                read_data(table, train, vocabulary);
+                table_pfx(table);
+                fclose(train);
         }
 
         if (prompt != NULL) {
