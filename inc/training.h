@@ -8,11 +8,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-struct entry {
-        int key;
-        int count;
-};
-
 void table_init(UT_array**, UT_array*);
 
 void table_depfx(UT_array*);

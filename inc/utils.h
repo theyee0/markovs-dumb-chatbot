@@ -9,6 +9,11 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+struct entry {
+        int key;
+        int count;
+};
+
 int intcmp(const void*, const void*);
 int strcmp_wrap(const void*, const void*);
 

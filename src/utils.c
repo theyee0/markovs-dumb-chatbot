@@ -19,17 +19,23 @@ int first_greater(const UT_array *v, const int t) {
         unsigned int r = utarray_len(v);
         unsigned int m;
 
+        struct entry *e;
+
         while (r - l > 1) {
                 m = (r + l) / 2;
 
-                if (*(int*)utarray_eltptr(v, m) >= t) {
+                e = utarray_eltptr(v, m);
+
+                if (e->count >= t) {
                         r = m;
                 } else {
                         l = m;
                 }
         }
 
-        if (*(int*)utarray_eltptr(v, l) >= t) {
+        e = utarray_eltptr(v, l);
+
+        if (e->count >= t) {
                 return l;
         } else {
                 return r;
