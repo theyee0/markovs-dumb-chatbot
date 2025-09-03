@@ -11,18 +11,13 @@ static int cmp_tabkey(const void *_a, const void *_b) {
 static void utarray_copy(void *_dst, const void *_src) {
         const UT_array *src = *(UT_array**)_src;
         UT_array **dst = _dst;
-        int n = src->n * src->icd.sz;
+        void *obj = NULL;
 
-        *dst = malloc(sizeof(**dst));
+        utarray_new(*dst, &src->icd);
 
-        **dst = *src;
-
-        (*dst)->d = malloc(n);
-        if ((*dst)->d == NULL) {
-                utarray_oom();
+        while ((obj = utarray_next(src, obj))) {
+                utarray_push_back(*dst, obj);
         }
-
-        memcpy((*dst)->d, src->d, n);
 }
 
 static void utarray_dtor(void *_elt) {
