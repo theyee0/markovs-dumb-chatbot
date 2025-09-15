@@ -57,7 +57,7 @@ void load_vocabulary_file(FILE* fp, UT_array* vocabulary) {
 
 void load_vocabulary_from_file(FILE *fp, UT_array *vocabulary) {
         const int buf_size = 1024;
-        char b[buf_size];
+        char *b = malloc(buf_size * sizeof(*b));
         int len = 0;
         char c;
 
@@ -75,6 +75,8 @@ void load_vocabulary_from_file(FILE *fp, UT_array *vocabulary) {
                 b[len] = '\0';
                 utarray_push_back(vocabulary, &b);
         }
+
+        free(b);
 }
 
 void remove_vocabulary_duplicates(UT_array *vocabulary) {
@@ -90,7 +92,10 @@ void remove_vocabulary_duplicates(UT_array *vocabulary) {
 
                 if (word == NULL) {
                         word = malloc(sizeof(*word));
-                        word->key = strdup(*p);
+
+                        /* Duplicate string */
+                        word->key = malloc((strlen(*p) + 1) * sizeof(*word->key));
+                        strcpy(word->key, *p);
 
                         HASH_ADD_KEYPTR(hh, words, word->key, strlen(word->key), word);
                 }
@@ -114,8 +119,9 @@ bool valid_word(const char *w, const UT_array *vocabulary) {
 
 int fgettok(FILE *fp, const UT_array *vocabulary) {
         const int buf_size = 1024;
-        char b[buf_size];
+        char *b = malloc(buf_size * sizeof(*b));
         int len = 0;
+        int token;
         char c;
 
         while (!feof(fp) && strchr(" \n", c = fgetc(fp)) == NULL)
@@ -123,7 +129,11 @@ int fgettok(FILE *fp, const UT_array *vocabulary) {
 
         b[len] = '\0';
 
-        return lookup_tok(b, vocabulary);
+        token = lookup_tok(b, vocabulary);
+
+        free(b);
+
+        return token;
 }
 
 int lookup_tok(const char* w, const UT_array *vocabulary) {

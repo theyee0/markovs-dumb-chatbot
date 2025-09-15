@@ -20,6 +20,7 @@ int strcmp_wrap(const void*, const void*);
 int first_greater(const UT_array *v, const int s);
 
 /* Load vocabulary from a dictionary containing one word per line */
+void load_vocabulary_from_file(FILE*, UT_array*);
 void load_vocabulary_file(FILE*, UT_array*);
 bool free_vocabulary(void);
 

@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
                         }
                         break;
                 case 'm':
-                        if ((model = fopen(optarg, "r")) == NULL) {
+                        if ((model = fopen(optarg, "r+")) == NULL) {
                                 perror("Invalid filename for inference model");
                                 exit(1);
                         }
@@ -55,52 +55,60 @@ int main(int argc, char *argv[]) {
         utarray_new(vocabulary, &ut_str_icd);
         utarray_new(history, &ut_int_icd);
 
-        if (vocab != NULL) {
-                load_vocabulary_file(vocab, vocabulary);
-                fclose(vocab);
-        } else {
-                exit(1);
-        }
-
-        remove_vocabulary_duplicates(vocabulary);
-
-        if (model == NULL) {
-                table_init(&table, vocabulary);
-        } else {
-                fclose(model);
-                //load_model(table, model);
-                perror("load_model(): Not yet implemented!");
-                exit(1);
-        }
-
         if (train != NULL) {
+                load_vocabulary_from_file(train, vocabulary);
+
+                if (vocab != NULL) {
+                        load_vocabulary_file(vocab, vocabulary);
+                }
+
+                if (model != NULL) {
+                        load_vocabulary_from_model(model, vocabulary);
+                }
+
+                remove_vocabulary_duplicates(vocabulary);
+
+                table_init(&table, vocabulary);
+
+                if (model != NULL) {
+                        rebase_model(table, vocabulary, model);
+                }
+
                 table_depfx(table);
                 read_data(table, train, vocabulary);
                 table_pfx(table);
                 fclose(train);
-        }
 
-        if (prompt != NULL) {
-                printf("%s ", prompt);
+                write_model(table, vocabulary, model);
+        } else {
+                printf("Loading Model...\n");
+                load_model(&table, vocabulary, model);
+                printf("Model Loaded!\n");
 
-                word = strtok(prompt, " \n,.!;:");
+                if (prompt != NULL) {
+                        printf("%s ", prompt);
 
-                while (word != NULL) {
-                        token = lookup_tok(word, vocabulary);
-                        if (token != -1)
-                                utarray_push_back(history, &token);
+                        word = strtok(prompt, " \n,.!;:");
 
-                        word = strtok(NULL, " \n,.!;:");
+                        while (word != NULL) {
+                                token = lookup_tok(word, vocabulary);
+                                if (token != -1) {
+                                        utarray_push_back(history, &token);
+                                }
+
+                                word = strtok(NULL, " \n,.!;:");
+                        }
+
+                        while ((word = next_tok(history, table, vocabulary))) {
+                                printf("%s ", word);
+                        }
+                        printf("\n");
                 }
 
-                while (true) {
-                        char* token = next_tok(history, table, vocabulary);
-                        if (token == NULL)
-                                break;
-                        printf("%s ", token);
-                }
-                printf("\n");
+                write_model(table, vocabulary, fopen("result.txt", "w"));
         }
+
+        fclose(model);
 
         utarray_free(vocabulary);
         utarray_free(history);
