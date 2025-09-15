@@ -1,7 +1,7 @@
 NAME := markovs_dumb_chatbot
 
 CC := gcc
-CFLAGS = -Wall -Wextra -Wpedantic -Werror
+CFLAGS = -Wall -Wextra -Wpedantic -Werror -ansi
 
 INC_DIR := inc
 SRC_DIR := src
@@ -30,7 +30,7 @@ clean:
 debug: CFLAGS += -g -fsanitize=address
 debug: $(NAME)
 
-release: CFLAGS += -O3
+release: CFLAGS += -O3 -flto
 release: $(NAME)
 
 profile: CFLAGS += -pg
