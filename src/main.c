@@ -22,11 +22,13 @@ int main(int argc, char *argv[]) {
         char *word;
         int token;
 
+	unsigned int n = 100;
+
         char *tok;
 
         srand(time(&t));
 
-        while ((opt = getopt(argc, argv, "ht:m:v:p:")) != -1) {
+        while ((opt = getopt(argc, argv, "ht:m:v:p:n:")) != -1) {
                 switch (opt) {
                 case 'h':
                         printf("Markov's Dumb Chatbot");
@@ -54,6 +56,9 @@ int main(int argc, char *argv[]) {
                                 exit(1);
                         }
                         break;
+		case 'n':
+			n = strtol(optarg, NULL, 10);
+			break;
                 case 'v':
                         if ((vocab = fopen(optarg, "r")) == NULL) {
                                 perror("Invalid filename for vocabulary file");
@@ -102,9 +107,7 @@ int main(int argc, char *argv[]) {
                 write_model(table, vocabulary, model);
 		utarray_free(training_files);
         } else {
-                printf("Loading Model...\n");
                 load_model(&table, vocabulary, model);
-                printf("Model Loaded!\n");
 
                 if (prompt != NULL) {
                         printf("%s ", prompt);
@@ -120,7 +123,7 @@ int main(int argc, char *argv[]) {
                                 word = strtok(NULL, " \n,.!;:");
                         }
 
-                        while ((word = next_tok(history, table, vocabulary))) {
+                        while (utarray_len(history) < n && (word = next_tok(history, table, vocabulary))) {
                                 printf("%s ", word);
                         }
                         printf("\n");
