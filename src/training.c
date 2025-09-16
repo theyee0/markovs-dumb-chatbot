@@ -1,7 +1,8 @@
 #include "training.h"
 #include <assert.h>
 
-const int buf_size = 1024;
+static const char *reject = "\a\b\f\n\r\t\v ";
+static const int buf_size = 1024;
 
 /* Sort entries in ascending order of key */
 static int cmp_tabkey(const void *_a, const void *_b) {
@@ -48,7 +49,7 @@ void load_vocabulary_file(FILE *fp, UT_array *vocabulary) {
 
         while (fgetword(b, buf_size, fp)) {
                 /* Keep parsing words and adding them to vocab until EOF */
-		b[strcspn(b, " \n")] = '\0';
+		b[strcspn(b, reject)] = '\0';
                 utarray_push_back(vocabulary, &b);
         }
 
@@ -64,7 +65,7 @@ void load_vocabulary_from_model(FILE *model, UT_array *vocabulary) {
         freopen(NULL, "r", model);
 
         while (!feof(model) && (c = fgetc(model)) != '\n') {
-		if (i + 1 == buf_size || c == ' ') {
+		if (i + 1 == buf_size || strchr(reject, c) != NULL) {
 			b[i] = '\0';
                 	/* Once word has been found, add to array */
                 	utarray_push_back(vocabulary, &b);
@@ -134,10 +135,10 @@ void load_model(UT_array **table, UT_array *vocabulary, FILE *model) {
         /* Iterate over table to fill rows with model data */
         while ((row = utarray_next(*table, row))) {
 		while (fgetword(b, buf_size, model)) {
-			if (b[0] == ' ') {
-				continue;
-			} else if (b[0] == '\n') {
+			if (b[0] == '\n') {
 				break;
+			} else if (strchr(reject, b[0])) {
+				continue;
 			}
 
 			if (strchr(b, ',') == NULL) {
@@ -201,10 +202,10 @@ void rebase_model(UT_array *table, UT_array *vocabulary, FILE *model) {
 
         for (parent = 0; (unsigned)parent < utarray_len(vocabulary); parent++) {
 		while (fgetword(b, buf_size, model)) {
-			if (b[0] == ' ') {
-				continue;
-			} else if (b[0] == '\n') {
+			if (b[0] == '\n') {
 				break;
+			} else if (strchr(reject, b[0])) {
+				continue;
 			}
 
 			if (strchr(b, ',') == NULL) {

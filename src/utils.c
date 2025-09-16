@@ -1,5 +1,7 @@
 #include "utils.h"
 
+static const char *reject = "\a\b\f\n\r\t\v ";
+
 int intcmp(const void *_a, const void *_b) {
         const int *a = _a;
         const int *b = _b;
@@ -54,9 +56,9 @@ char *fgetword(char *s, int size, FILE *stream) {
 	while (!feof(stream) && i + 1 < size) {
 		c = fgetc(stream);
 
-		s[i++] = tolower(c);
+		s[i++] = c;
 
-		if (c == ' ' || c == '\n') {
+		if (strchr(reject, c) != NULL) {
 			break;
 		}
 	}
@@ -73,16 +75,12 @@ char *fgetword(char *s, int size, FILE *stream) {
 int fgettok(FILE *fp, const UT_array *vocabulary) {
         const int buf_size = 1024;
         char *b = malloc(buf_size * sizeof(*b));
-        int len = 0;
+
         int token;
-        char c;
 
-        /* Parse characters until end of word */
-        while (!feof(fp) && len + 1 < buf_size && strchr(" \n", c = fgetc(fp)) == NULL) {
-                b[len++] = tolower(c);
-	}
+	fgetword(b, buf_size, fp);
 
-        b[len] = '\0';
+        b[strcspn(b, reject)] = '\0';
 
         token = lookup_tok(b, vocabulary);
 
