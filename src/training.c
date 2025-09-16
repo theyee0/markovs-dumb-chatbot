@@ -1,6 +1,9 @@
 #include "training.h"
 #include <assert.h>
 
+const int buf_size = 1024;
+
+/* Sort entries in ascending order of key */
 static int cmp_tabkey(const void *_a, const void *_b) {
         const struct entry *a = _a;
         const struct entry *b = _b;
@@ -8,15 +11,18 @@ static int cmp_tabkey(const void *_a, const void *_b) {
         return a->key - b->key;
 }
 
+/* Perform deep copy of utarray of utarrays */
 static void utarray_copy(void *_dst, const void *_src) {
         const UT_array *src = *(UT_array**)_src;
         UT_array **dst = _dst;
-        /* TODO: Investigate cause of memory leak in original code
-        int n = src->n * src->icd.sz;
-        *dst = malloc(sizeof(UT_array));
-        **dst = *src;
-        (*dst)->d = malloc(n);
-        memcpy((*dst)->d, src->d, n);
+
+        /*
+          TODO: Investigate cause of memory leak in original code
+          int n = src->n * src->icd.sz;
+          *dst = malloc(sizeof(UT_array));
+          **dst = *src;
+          (*dst)->d = malloc(n);
+          memcpy((*dst)->d, src->d, n);
         */
 
         void *obj = NULL;
@@ -28,106 +34,212 @@ static void utarray_copy(void *_dst, const void *_src) {
         }
 }
 
+/* Wrapper to free utarray */
 static void utarray_dtor(void *_elt) {
         UT_array **elt = _elt;
 
         utarray_free(*elt);
 }
 
-void load_vocabulary_from_model(FILE *model, UT_array *vocabulary) {
-        const int buf_size = 1024;
-        char c;
-        int len;
+void load_vocabulary_file(FILE *fp, UT_array *vocabulary) {
         char *b = malloc(buf_size * sizeof(*b));
 
-        while (!feof(model)) {
-                len = 0;
-                while (!feof(model) && strchr(" \n", c = fgetc(model)) == NULL) {
-                        b[len++] = tolower(c);
-                }
+        freopen(NULL, "r", fp);
 
-                b[len] = '\0';
-
+        while (fgetword(b, buf_size, fp)) {
+                /* Keep parsing words and adding them to vocab until EOF */
+		b[strcspn(b, " \n")] = '\0';
                 utarray_push_back(vocabulary, &b);
-
-                if (c == '\n') {
-                        break;
-                }
         }
 
         free(b);
 }
 
+void load_vocabulary_from_model(FILE *model, UT_array *vocabulary) {
+        char *b = malloc(buf_size * sizeof(*b));
+	int i = 0;
+
+	char c;
+
+        freopen(NULL, "r", model);
+
+        while (!feof(model) && (c = fgetc(model)) != '\n') {
+		if (i + 1 == buf_size || c == ' ') {
+			b[i] = '\0';
+                	/* Once word has been found, add to array */
+                	utarray_push_back(vocabulary, &b);
+			i = 0;
+		} else {
+			b[i++] = c;
+		}
+        }
+
+        free(b);
+}
+
+void remove_vocabulary_duplicates(UT_array *vocabulary) {
+        struct {
+                char *key;
+                UT_hash_handle hh;
+        } *tmp, *word, *words = NULL;
+
+        char **p = NULL;
+
+        /* Iterate over vocab list and add items to hash set if unique */
+        while ((p = utarray_next(vocabulary, p))) {
+                HASH_FIND_STR(words, *p, word);
+
+                if (word == NULL) {
+                        word = malloc(sizeof(*word));
+
+                        /* Duplicate string */
+                        word->key = malloc((strlen(*p) + 1) * sizeof(*word->key));
+                        strcpy(word->key, *p);
+
+                        HASH_ADD_KEYPTR(hh, words, word->key, strlen(word->key), word);
+                }
+        }
+
+        utarray_clear(vocabulary);
+
+        /* Write unique words from set back to vocabulary array */
+        HASH_ITER(hh, words, word, tmp) {
+                utarray_push_back(vocabulary, &word->key);
+                HASH_DEL(words, word);
+                free(word->key);
+                free(word);
+        }
+
+        utarray_sort(vocabulary, strcmp_wrap);
+}
+
 void load_model(UT_array **table, UT_array *vocabulary, FILE *model) {
-        const int max_buffer = 8192;
-        int parent, child;
+        char *b = malloc(buf_size * sizeof(*b));
+
         UT_array **row = NULL;
-        char *line = malloc(max_buffer * sizeof(*line));
-        char *tok = NULL;
+
         struct entry e;
+        int key, count;
+
+	int eol;
+
+        char *endptr = NULL;
+	char *tok;
 
         freopen(NULL, "r", model);
 
         load_vocabulary_from_model(model, vocabulary);
         table_init(table, vocabulary);
 
-        while ((row = utarray_next(*table, row)) && !feof(model)) {
-                fgets(line, max_buffer, model);
+        /* Iterate over table to fill rows with model data */
+        while ((row = utarray_next(*table, row))) {
+		while (fgetword(b, buf_size, model)) {
+			if (b[0] == ' ') {
+				continue;
+			} else if (b[0] == '\n') {
+				break;
+			}
 
-                tok = strtok(line, " ");
+			if (strchr(b, ',') == NULL) {
+				fprintf(stderr, "WARNING: Malformed model data; unmatched key/count pair\n");
+				break;
+			}
 
-                while (tok != NULL) {
-                        parent = atoi(tok);
-                        tok = strtok(NULL, " ");
-                        if (tok == NULL) {
-                                break;
-                        }
+			eol = (strchr(b, '\n') != NULL);
 
-                        child = atoi(tok);
+			/* Iteratively parse all key/count pairs and add to table */
+			tok = strtok(b, ",");
+			assert(tok != NULL);
+			key = strtol(tok, &endptr, 10);
+			if (*endptr != '\0' && *endptr != ' ' && *endptr != '\n') {
+				fprintf(stderr, "WARNING: Non-numerical model data\n");
+			}
 
-                        e.key = parent;
-                        e.count = child;
-                        utarray_push_back(*row, &e);
-                        tok = strtok(NULL, " ");
-                }
+			tok = strtok(NULL, ",");
+			assert(tok != NULL);
+			count = strtol(tok, &endptr, 10);
+			if (*endptr != '\0' && *endptr != ' ' && *endptr != '\n') {
+				fprintf(stderr, "WARNING: Non-numerical model data\n");
+			}
+
+			e.key = key;
+			e.count = count;
+
+			utarray_push_back(*row, &e);
+
+			if (eol) {
+				break;
+			}
+		}
         }
 
-        free(line);
+	write_model(*table, vocabulary, fopen("out.txt", "w"));
+
+        free(b);
 }
 
 void rebase_model(UT_array *table, UT_array *vocabulary, FILE *model) {
-        const int buf_size = 1024;
-        char *line = malloc(buf_size * sizeof(*line));
+        char *b = malloc(buf_size * sizeof(*b));
+
         UT_array *model_vocab = NULL;
-        int parent, child;
-        char *tok = NULL;
+
+        char *endptr = NULL;
+
+	int eol;
+
+	char *tok;
+
+        int key, count, parent;
 
         utarray_new(model_vocab, &ut_str_icd);
 
+        freopen(NULL, "r", model);
         load_vocabulary_from_model(model, model_vocab);
+        remove_vocabulary_duplicates(vocabulary);
 
         parent = 0;
 
-        while ((fgets(line, buf_size, model))) {
-                tok = strtok(line, " ");
+        for (parent = 0; (unsigned)parent < utarray_len(vocabulary); parent++) {
+		while (fgetword(b, buf_size, model)) {
+			if (b[0] == ' ') {
+				continue;
+			} else if (b[0] == '\n') {
+				break;
+			}
 
-                /* TODO: Add error correction and detection */
-                while (tok != NULL) {
-                        child = lookup_tok(*(char**)utarray_eltptr(model_vocab, (unsigned)atoi(tok)), vocabulary);
-                        tok = strtok(NULL, " ");
+			if (strchr(b, ',') == NULL) {
+				fprintf(stderr, "WARNING: %s | Malformed model data; unmatched key/count pair\n", b);
+				break;
+			}
 
-                        if (tok == NULL) {
-                                break;
-                        }
+			eol = (strchr(b, '\n') != NULL);
 
-                        table_push(table, parent, child, atoi(tok));
-                        tok = strtok(NULL, " ");
-                }
+			/* Iteratively parse all key/count pairs and add to table */
+			tok = strtok(b, ",");
+			assert(tok != NULL);
+			key = strtol(tok, &endptr, 10);
+			if (*endptr != '\0' && *endptr != ' ' && *endptr != '\n') {
+				fprintf(stderr, "WARNING: Non-numerical model data\n");
+			}
 
-                parent++;
+			key = lookup_tok(*(char**)utarray_eltptr(model_vocab, (unsigned)key), vocabulary);
+
+			tok = strtok(NULL, ",");
+			assert(tok != NULL);
+			count = strtol(tok, &endptr, 10);
+			if (*endptr != '\0' && *endptr != ' ' && *endptr != '\n') {
+				fprintf(stderr, "WARNING: Non-numerical model data\n");
+			}
+
+			table_push(table, parent, key, count);
+
+			if (eol) {
+				break;
+			}
+		}
         }
 
-        free(line);
+        free(b);
         utarray_free(model_vocab);
 }
 
@@ -137,16 +249,20 @@ void write_model(UT_array *table, UT_array *vocabulary, FILE *model) {
 
         struct entry *e = NULL;
 
+        freopen(NULL, "w", model);
+
+        /* Write all vocabulary words to first line of file */
         while ((word = utarray_next(vocabulary, word))) {
                 fprintf(model, "%s ", *word);
         }
 
+        /* Iterate over table and write space-separated key/count pairs */
         while ((row = utarray_next(table, row))) {
                 fprintf(model, "\n");
 
                 while ((e = utarray_next(*row, e))) {
                         assert(e->key >= 0 && e->count > 0);
-                        fprintf(model, "%d %d ", e->key, e->count);
+                        fprintf(model, "%d,%d ", e->key, e->count);
                 }
         }
 }
@@ -158,17 +274,35 @@ void table_init(UT_array **table, UT_array *vocabulary) {
         int vocabulary_size;
         UT_array *row = NULL;
 
+        /* Clean up vocabulary */
         remove_vocabulary_duplicates(vocabulary);
         vocabulary_size = utarray_len(vocabulary);
 
+        /* Prepare memory */
         utarray_new(*table, &table_icd);
-        utarray_reserve(*table, vocabulary_size);
 
+        /* Iterate over table and add new (empty) rows */
         for (i = 0; i < vocabulary_size; i++) {
                 row = NULL;
                 utarray_new(row, &entry_icd);
                 utarray_push_back(*table, &row);
                 utarray_free(row);
+        }
+}
+
+void table_pfx(UT_array *table) {
+        UT_array **arr = NULL;
+        struct entry *e;
+        int prev;
+
+        /* Iterate over table and convert row counts into prefix array */
+        while ((arr = utarray_next(table, arr))) {
+                e = NULL;
+                prev = 0;
+
+                while ((e = utarray_next(*arr, e))) {
+                        prev = (e->count += prev);
+                }
         }
 }
 
@@ -178,6 +312,7 @@ void table_depfx(UT_array *table) {
         int prev;
         int tmp;
 
+        /* Iterate over table and convert each row's prefix array back to counts */
         while ((arr = utarray_next(table, arr))) {
                 e = NULL;
                 prev = 0;
@@ -189,51 +324,29 @@ void table_depfx(UT_array *table) {
         }
 }
 
-void table_pfx(UT_array *table) {
-        UT_array **arr = NULL;
-        struct entry *e;
-        int prev;
-        while ((arr = utarray_next(table, arr))) {
-                e = NULL;
-                prev = 0;
-
-                while ((e = utarray_next(*arr, e))) {
-                        prev = (e->count += prev);
-                }
-        }
-}
-
-/*
-static int cmp_tabcnt(const void *_a, const void *_b) {
-        const struct entry *a = _a;
-        const struct entry *b = _b;
-
-        return a->count - b->count;
-}
-*/
-
-void table_inc(UT_array *table, const int parent, const int child) {
-        table_push(table, parent, child, 1);
-}
-
-void table_push(UT_array *table, const int parent, const int child, const int val) {
+void table_push(UT_array *table, const int parent, const int key, const int count) {
         UT_array *row = *(UT_array**)utarray_eltptr(table, (unsigned)parent);
         struct entry e;
         struct entry *p = NULL;
 
-        assert(child >= 0 && val > 0);
+        e.key = key;
+        e.count = count;
 
-        e.key = child;
-        e.count = val;
-
+        /* Check if the given key already exists */
         p = utarray_find(row, &e, cmp_tabkey);
 
+        /* If key not found, add key; otherwise, just increment it */
         if (p == NULL) {
                 utarray_push_back(row, &e);
                 utarray_sort(row, cmp_tabkey);
         } else {
-                p->count += val;
+                p->count += count;
         }
+}
+
+void table_inc(UT_array *table, const int parent, const int key) {
+        /* Adds one to a given item in the table */
+        table_push(table, parent, key, 1);
 }
 
 void read_data(UT_array *table, FILE* input, const UT_array *vocabulary) {
@@ -242,6 +355,7 @@ void read_data(UT_array *table, FILE* input, const UT_array *vocabulary) {
 
         rewind(input);
 
+        /* Iterate over successive words and increment the table */
         while (!feof(input)) {
                 cur = fgettok(input, vocabulary);
 

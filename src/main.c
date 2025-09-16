@@ -12,13 +12,17 @@ int main(int argc, char *argv[]) {
         UT_array *history = NULL;
         UT_array *table = NULL;
 
-        FILE *vocab = NULL;
+        UT_array *training_files = NULL;
+        FILE **train_ptr = NULL;
         FILE *train = NULL;
+        FILE *vocab = NULL;
         FILE *model = NULL;
 
         char *prompt = NULL;
         char *word;
         int token;
+
+        char *tok;
 
         srand(time(&t));
 
@@ -26,16 +30,26 @@ int main(int argc, char *argv[]) {
                 switch (opt) {
                 case 'h':
                         printf("Markov's Dumb Chatbot");
-
                         return 0;
                 case 't':
-                        if ((train = fopen(optarg, "r")) == NULL) {
-                                perror("Invalid filename for training data");
-                                exit(1);
+                        utarray_new(training_files, &ut_ptr_icd);
+
+                        tok = strtok(optarg, ",");
+
+                        while (tok != NULL) {
+                                if ((train = fopen(tok, "r")) == NULL) {
+                                        utarray_free(training_files);
+                                        perror("Invalid filename for training data");
+                                        exit(1);
+                                }
+
+                                utarray_push_back(training_files, &train);
+
+                                tok = strtok(NULL, ",");
                         }
                         break;
                 case 'm':
-                        if ((model = fopen(optarg, "r+")) == NULL) {
+                        if ((model = fopen(optarg, "a+")) == NULL) {
                                 perror("Invalid filename for inference model");
                                 exit(1);
                         }
@@ -52,34 +66,41 @@ int main(int argc, char *argv[]) {
                 }
         }
 
+        if (model == NULL) {
+                perror("No model file specified!");
+                exit(1);
+        }
+
         utarray_new(vocabulary, &ut_str_icd);
         utarray_new(history, &ut_int_icd);
 
         if (train != NULL) {
-                load_vocabulary_from_file(train, vocabulary);
+                train_ptr = NULL;
+                while ((train_ptr = utarray_next(training_files, train_ptr))) {
+                        load_vocabulary_file(*train_ptr, vocabulary);
+                }
 
                 if (vocab != NULL) {
                         load_vocabulary_file(vocab, vocabulary);
                 }
 
-                if (model != NULL) {
-                        load_vocabulary_from_model(model, vocabulary);
-                }
+                load_vocabulary_from_model(model, vocabulary);
 
                 remove_vocabulary_duplicates(vocabulary);
 
                 table_init(&table, vocabulary);
-
-                if (model != NULL) {
-                        rebase_model(table, vocabulary, model);
-                }
+                rebase_model(table, vocabulary, model);
 
                 table_depfx(table);
-                read_data(table, train, vocabulary);
+                train_ptr = NULL;
+                while ((train_ptr = utarray_next(training_files, train_ptr))) {
+                        read_data(table, *train_ptr, vocabulary);
+                        fclose(*train_ptr);
+                }
                 table_pfx(table);
-                fclose(train);
 
                 write_model(table, vocabulary, model);
+		utarray_free(training_files);
         } else {
                 printf("Loading Model...\n");
                 load_model(&table, vocabulary, model);
@@ -104,8 +125,6 @@ int main(int argc, char *argv[]) {
                         }
                         printf("\n");
                 }
-
-                write_model(table, vocabulary, fopen("result.txt", "w"));
         }
 
         fclose(model);

@@ -42,79 +42,32 @@ int first_greater(const UT_array *v, const int t) {
         }
 }
 
-void load_vocabulary_file(FILE* fp, UT_array* vocabulary) {
-        const int buf_size = 1024;
-        char *b = malloc(buf_size * sizeof(*b));
-
-        while (fgets(b, buf_size, fp) != NULL) {
-                b[strcspn(b, "\n")] = '\0';
-                utarray_push_back(vocabulary, &b);
-        }
-
-        free(b);
-        utarray_sort(vocabulary, strcmp_wrap);
-}
-
-void load_vocabulary_from_file(FILE *fp, UT_array *vocabulary) {
-        const int buf_size = 1024;
-        char *b = malloc(buf_size * sizeof(*b));
-        int len = 0;
-        char c;
-
-        while (!feof(fp)) {
-                if (strchr(" \n", c = fgetc(fp)) == NULL) {
-                        b[len++] = tolower(c);
-                } else {
-                        b[len] = '\0';
-                        utarray_push_back(vocabulary, &b);
-                        len = 0;
-                }
-        }
-
-        if (len > 0) {
-                b[len] = '\0';
-                utarray_push_back(vocabulary, &b);
-        }
-
-        free(b);
-}
-
-void remove_vocabulary_duplicates(UT_array *vocabulary) {
-        struct {
-                char *key;
-                UT_hash_handle hh;
-        } *tmp, *word, *words = NULL;
-
-        char **p = NULL;
-
-        while ((p = utarray_next(vocabulary, p))) {
-                HASH_FIND_STR(words, *p, word);
-
-                if (word == NULL) {
-                        word = malloc(sizeof(*word));
-
-                        /* Duplicate string */
-                        word->key = malloc((strlen(*p) + 1) * sizeof(*word->key));
-                        strcpy(word->key, *p);
-
-                        HASH_ADD_KEYPTR(hh, words, word->key, strlen(word->key), word);
-                }
-        }
-
-        utarray_clear(vocabulary);
-
-        HASH_ITER(hh, words, word, tmp) {
-                utarray_push_back(vocabulary, &word->key);
-                HASH_DEL(words, word);
-                free(word->key);
-                free(word);
-        }
-
-        utarray_sort(vocabulary, strcmp_wrap);
-}
-
 bool valid_word(const char *w, const UT_array *vocabulary) {
         return utarray_find(vocabulary, &w, strcmp_wrap);
+}
+
+
+char *fgetword(char *s, int size, FILE *stream) {
+	int i = 0;
+	char c = '\0';
+
+	while (!feof(stream) && i + 1 < size) {
+		c = fgetc(stream);
+
+		s[i++] = tolower(c);
+
+		if (c == ' ' || c == '\n') {
+			break;
+		}
+	}
+
+	s[i] = '\0';
+
+	if (i == 0 || s[0] == EOF) {
+		return NULL;
+	} else {
+		return s;
+	}
 }
 
 int fgettok(FILE *fp, const UT_array *vocabulary) {
@@ -124,8 +77,10 @@ int fgettok(FILE *fp, const UT_array *vocabulary) {
         int token;
         char c;
 
-        while (!feof(fp) && strchr(" \n", c = fgetc(fp)) == NULL)
+        /* Parse characters until end of word */
+        while (!feof(fp) && len + 1 < buf_size && strchr(" \n", c = fgetc(fp)) == NULL) {
                 b[len++] = tolower(c);
+	}
 
         b[len] = '\0';
 
@@ -137,6 +92,7 @@ int fgettok(FILE *fp, const UT_array *vocabulary) {
 }
 
 int lookup_tok(const char* w, const UT_array *vocabulary) {
+        /* Search for a word's index in the vocabulary */
         void *loc = utarray_find(vocabulary, &w, strcmp_wrap);
 
         if (loc != NULL) {
@@ -147,6 +103,7 @@ int lookup_tok(const char* w, const UT_array *vocabulary) {
 }
 
 char* lookup_word(const int t, const UT_array *vocabulary) {
+        /* Return the word corresponding to an index in the vocabulary */
         if (0 <= t && t < (int)utarray_len(vocabulary))
                 return *(char**)utarray_eltptr(vocabulary, (unsigned)t);
         else

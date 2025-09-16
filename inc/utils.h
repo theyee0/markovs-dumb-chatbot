@@ -1,7 +1,6 @@
 #ifndef __UTILS_H
 #define __UTILS_H
 
-#include "uthash.h"
 #include "utarray.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,6 +8,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+/* key/count entry pairs */
 struct entry {
         int key;
         int count;
@@ -17,14 +17,10 @@ struct entry {
 int intcmp(const void*, const void*);
 int strcmp_wrap(const void*, const void*);
 
+/* Find first item greater than given integer in an int array */
 int first_greater(const UT_array *v, const int s);
 
-/* Load vocabulary from a dictionary containing one word per line */
-void load_vocabulary_from_file(FILE*, UT_array*);
-void load_vocabulary_file(FILE*, UT_array*);
-bool free_vocabulary(void);
-
-void remove_vocabulary_duplicates(UT_array *vocabulary);
+char *fgetword(char *s, int size, FILE *stream);
 
 /* Check if a given word is in the vocabulary */
 bool valid_word(const char*, const UT_array*);
