@@ -174,8 +174,6 @@ void load_model(UT_array **table, UT_array *vocabulary, FILE *model) {
 		}
         }
 
-	write_model(*table, vocabulary, fopen("out.txt", "w"));
-
         free(b);
 }
 
