@@ -35,6 +35,7 @@ To train the model, the files can be listed with `-t` and optionally, an externa
 ```
 ./markovs_dumb_chatbot -m model.txt -t file1.txt,file2.txt,file3.txt -v vocab.txt
 ```
+Note that for better results, you may want to strip the file of newlines and replace with spaces, unless you intend for there to be a full context break after a given character (end of sentence, for instance).
 
 Pretrained sample models are available on the "Releases" page.
 
