@@ -29,6 +29,7 @@
 *.dylib
 
 # Executables
+markovs_dumb_chatbot
 *.exe
 *.out
 *.app
@@ -56,4 +57,5 @@ dkms.conf
 
 # IDE tooling
 compile_commands.json
+.cache
 tags
