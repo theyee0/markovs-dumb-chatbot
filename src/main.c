@@ -31,7 +31,14 @@ int main(int argc, char *argv[]) {
         while ((opt = getopt(argc, argv, "ht:m:v:p:n:")) != -1) {
                 switch (opt) {
                 case 'h':
-                        printf("Markov's Dumb Chatbot");
+                        printf("Markov's Dumb Chatbot\n");
+                        printf("Usage: ./markovs_dumb_chatbot [OPTIONS]...\n");
+			printf("-h			Print this help\n");
+			printf("-t file1[,file2,...]	Specify training file names\n");
+			printf("-v vocab 		Specify vocabulary file name\n");
+			printf("-m model		Specify model file name\n");
+			printf("-p prompt		Specify prompt for inference\n");
+			printf("-n number		Specify number of words generated\n");
                         return 0;
                 case 't':
                         utarray_new(training_files, &ut_ptr_icd);
