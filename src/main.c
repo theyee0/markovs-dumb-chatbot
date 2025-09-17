@@ -22,23 +22,24 @@ int main(int argc, char *argv[]) {
         char *word;
         int token;
 
-	unsigned int n = 100;
+        unsigned int n = 100;
 
         char *tok;
 
         srand(time(&t));
 
+        /* Parse command line options */
         while ((opt = getopt(argc, argv, "ht:m:v:p:n:")) != -1) {
                 switch (opt) {
                 case 'h':
                         printf("Markov's Dumb Chatbot\n");
                         printf("Usage: ./markovs_dumb_chatbot [OPTIONS]...\n");
-			printf("-h			Print this help\n");
-			printf("-t file1[,file2,...]	Specify training file names\n");
-			printf("-v vocab 		Specify vocabulary file name\n");
-			printf("-m model		Specify model file name\n");
-			printf("-p prompt		Specify prompt for inference\n");
-			printf("-n number		Specify number of words generated\n");
+                        printf("-h			Print this help\n");
+                        printf("-t file1[,file2,...]	Specify training file names\n");
+                        printf("-v vocab 		Specify vocabulary file name\n");
+                        printf("-m model		Specify model file name\n");
+                        printf("-p prompt		Specify prompt for inference\n");
+                        printf("-n number		Specify number of words generated\n");
                         return 0;
                 case 't':
                         utarray_new(training_files, &ut_ptr_icd);
@@ -63,9 +64,9 @@ int main(int argc, char *argv[]) {
                                 exit(1);
                         }
                         break;
-		case 'n':
-			n = strtol(optarg, NULL, 10);
-			break;
+                case 'n':
+                        n = strtol(optarg, NULL, 10);
+                        break;
                 case 'v':
                         if ((vocab = fopen(optarg, "r")) == NULL) {
                                 perror("Invalid filename for vocabulary file");
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (model == NULL) {
-                perror("No model file specified!");
+                fprintf(stderr, "No model file specified!");
                 exit(1);
         }
 
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
         utarray_new(history, &ut_int_icd);
 
         if (train != NULL) {
+                /* Loads all vocabulary from specified files */
                 train_ptr = NULL;
                 while ((train_ptr = utarray_next(training_files, train_ptr))) {
                         load_vocabulary_file(*train_ptr, vocabulary);
@@ -100,6 +102,7 @@ int main(int argc, char *argv[]) {
 
                 remove_vocabulary_duplicates(vocabulary);
 
+                /* Trains model using provided data */
                 table_init(&table, vocabulary);
                 rebase_model(table, vocabulary, model);
 
@@ -112,29 +115,29 @@ int main(int argc, char *argv[]) {
                 table_pfx(table);
 
                 write_model(table, vocabulary, model);
-		utarray_free(training_files);
-        } else {
+                utarray_free(training_files);
+        } else if (prompt != NULL) {
                 load_model(&table, vocabulary, model);
 
-                if (prompt != NULL) {
-                        printf("%s ", prompt);
+                printf("%s ", prompt);
 
-                        word = strtok(prompt, " \n,.!;:");
+                word = strtok(prompt, " \n,.!;:");
 
-                        while (word != NULL) {
-                                token = lookup_tok(word, vocabulary);
-                                if (token != -1) {
-                                        utarray_push_back(history, &token);
-                                }
-
-                                word = strtok(NULL, " \n,.!;:");
+                /* Tokenize prompt */
+                while (word != NULL) {
+                        token = lookup_tok(word, vocabulary);
+                        if (token != -1) {
+                                utarray_push_back(history, &token);
                         }
 
-                        while (utarray_len(history) < n && (word = next_tok(history, table, vocabulary))) {
-                                printf("%s ", word);
-                        }
-                        printf("\n");
+                        word = strtok(NULL, " \n,.!;:");
                 }
+
+                /* Keep printing completions while they exist and the max word count has not been reached */
+                while (utarray_len(history) < n && (word = next_tok(history, table, vocabulary))) {
+                        printf("%s ", word);
+                }
+                printf("\n");
         }
 
         fclose(model);

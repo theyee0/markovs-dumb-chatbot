@@ -20,6 +20,7 @@ int strcmp_wrap(const void*, const void*);
 /* Find first item greater than given integer in an int array */
 int first_greater(const UT_array *v, const int s);
 
+/* Picks characters in words that are not escape sequences or spaces */
 char *fgetword(char *s, int size, FILE *stream);
 
 /* Check if a given word is in the vocabulary */
